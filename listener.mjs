@@ -3,6 +3,20 @@ import fetch from "node-fetch";
 import notifier from "node-notifier";
 import open from "open";
 import { JSDOM } from "jsdom";
+import { WebClient } from "@slack/web-api";
+import dotenvFlow from "dotenv-flow";
+
+dotenvFlow.config();
+
+const token = process.env.SLACK_TOKEN;
+const slack = new WebClient(token);
+const users = process.env.USERS.split(",")
+  .concat(["channel:channel"])
+  .reduce((acc, user) => {
+    const [name, id] = user.split(":");
+    return { ...acc, [name]: id };
+  }, {});
+const headless = process.env.HEADLESS === "true";
 
 const debugAll = false;
 
@@ -91,6 +105,7 @@ const checkListeners = async (time) => {
   const processes = listeners.map(async (listener) => {
     const {
       name,
+      user = "channel",
       initialValue = store[name] || {},
       compare = "prevValue !== value",
       pipeline,
@@ -167,7 +182,7 @@ const checkListeners = async (time) => {
             }
           );
         }
-        if (urlLocation) open(urlLocation);
+        if (urlLocation && !headless) open(urlLocation);
       }
 
       if (notifyMessage) {
@@ -179,7 +194,13 @@ const checkListeners = async (time) => {
             value,
           });
         }
-        notifier.notify({ title, sound: true });
+        if (!headless) notifier.notify({ title, sound: true });
+
+        const userMarkup = user === "channel" ? "!channel" : "@" + users[user];
+        slack.chat.postMessage({
+          text: `<${userMarkup}> ${title}${urlLocation ? ": " + urlLocation : ""}`,
+          channel: "general",
+        });
       }
 
       console.log(title, urlLocation, new Date());
