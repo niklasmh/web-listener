@@ -1,8 +1,12 @@
 name: Listen for changes
 
 on:
+  push:
+    branches:
+      - master
+
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "*/15 * * * *"
 
 jobs:
   listen:
