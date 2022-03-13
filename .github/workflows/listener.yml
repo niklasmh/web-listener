@@ -6,7 +6,7 @@ on:
       - master
 
   schedule:
-    - cron: "*/15 * * * *"
+    - cron: "3,13,23,33,43,53 * * * *"
 
 jobs:
   listen:
