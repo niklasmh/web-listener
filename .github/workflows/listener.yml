@@ -1,0 +1,42 @@
+name: Listen for changes
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+
+jobs:
+  listen:
+    runs-on: ubuntu-latest
+
+    env:
+      HEADLESS: true
+      FUNCTION: true
+
+    steps:
+      - name: Checkout 🛎️
+        uses: actions/checkout@v2.3.1
+
+      - name: Restore Previous State 🔎
+        id: store-cache
+        uses: actions/cache@v2
+        with:
+          path: store.json
+          key: ${{ runner.os }}-store
+
+      - name: Cache Node Modules
+        id: node-cache
+        uses: actions/cache@v2
+        with:
+          path: node_modules
+          key: node-modules-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Dependencies
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: npm ci
+
+      - name: Run 🏃‍♀️
+        env:
+          SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
+          LISTENERS_URL: ${{ secrets.LISTENERS_URL }}
+          USERS: ${{ secrets.USERS }}
+        run: npm start

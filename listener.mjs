@@ -16,14 +16,17 @@ const users = process.env.USERS.split(",")
     const [name, id] = user.split(":");
     return { ...acc, [name]: id };
   }, {});
-const headless = process.env.HEADLESS === "true";
+const isHeadless = process.env.HEADLESS === "true";
+const isFunction = process.env.FUNCTION === "true";
 
 const debugAll = false;
 
 const listeners = [];
 try {
-  const listenerList = fs
-    .readFileSync("./listeners.txt", "utf8")
+  const listenersFileContent = isHeadless
+    ? await fetch(process.env.LISTENERS_URL).then((r) => r.text())
+    : fs.readFileSync("./listeners.txt", "utf8");
+  const listenerList = listenersFileContent
     .trim()
     .split("\n")
     .filter((url) => !url.startsWith("#"));
@@ -182,7 +185,7 @@ const checkListeners = async (time) => {
             }
           );
         }
-        if (urlLocation && !headless) open(urlLocation);
+        if (urlLocation && !isHeadless) open(urlLocation);
       }
 
       if (notifyMessage) {
@@ -194,7 +197,7 @@ const checkListeners = async (time) => {
             value,
           });
         }
-        if (!headless) notifier.notify({ title, sound: true });
+        if (!isHeadless) notifier.notify({ title, sound: true });
       }
 
       if (slackToken) {
@@ -221,7 +224,9 @@ const checkListeners = async (time) => {
 
 checkListeners(time);
 
-setInterval(() => {
-  time += dt;
-  checkListeners(time);
-}, dt * 1000);
+if (!isFunction) {
+  setInterval(() => {
+    time += dt;
+    checkListeners(time);
+  }, dt * 1000);
+}
