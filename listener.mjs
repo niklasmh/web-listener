@@ -8,8 +8,8 @@ import dotenvFlow from "dotenv-flow";
 
 dotenvFlow.config();
 
-const token = process.env.SLACK_TOKEN;
-const slack = new WebClient(token);
+const slackToken = process.env.SLACK_TOKEN;
+const slack = new WebClient(slackToken);
 const users = process.env.USERS.split(",")
   .concat(["channel:channel"])
   .reduce((acc, user) => {
@@ -163,7 +163,7 @@ const checkListeners = async (time) => {
 
     if (shouldFire) {
       let urlLocation = "";
-      let title = name + " fikk et ukjent varsel";
+      let title = name + " fikk et varsel";
 
       if (url) {
         if (typeof url === "function") {
@@ -195,7 +195,9 @@ const checkListeners = async (time) => {
           });
         }
         if (!headless) notifier.notify({ title, sound: true });
+      }
 
+      if (slackToken) {
         const userMarkup = user === "channel" ? "!channel" : "@" + users[user];
         slack.chat.postMessage({
           text: `<${userMarkup}> ${title}${urlLocation ? ": " + urlLocation : ""}`,
