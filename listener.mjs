@@ -10,7 +10,7 @@ dotenvFlow.config();
 
 const slackToken = process.env.SLACK_TOKEN;
 const slack = new WebClient(slackToken);
-const users = process.env.USERS.split(",")
+const slackUsers = process.env.USERS.split(",")
   .concat(["channel:channel"])
   .reduce((acc, user) => {
     const [name, id] = user.split(":");
@@ -37,7 +37,7 @@ try {
     }
     if (extension === "md") {
       const markdown = await fetch(url).then((r) => r.text());
-      const listenerSections = markdown.split(/^#/gm).slice(1);
+      const listenerSections = markdown.split(/^# /gm).slice(1);
       return listenerSections.map((section) => {
         const [name, ...codes] = section.trim().split("```");
         const config = codes
@@ -201,7 +201,7 @@ const checkListeners = async (time) => {
       }
 
       if (slackToken) {
-        const userMarkup = user === "channel" ? "!channel" : "@" + users[user];
+        const userMarkup = user === "channel" ? "!channel" : "@" + slackUsers[user];
         slack.chat.postMessage({
           text: `<${userMarkup}> ${title}${urlLocation ? ": " + urlLocation : ""}`,
           channel: "general",
