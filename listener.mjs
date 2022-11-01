@@ -19,7 +19,7 @@ const slackUsers = process.env.USERS.split(",")
 const isHeadless = process.env.HEADLESS === "true";
 const isFunction = process.env.FUNCTION === "true";
 
-const debugAll = false;
+const debugAll = process.env.DEBUG === "true";
 
 const listeners = [];
 try {
@@ -90,10 +90,12 @@ try {
 const execCode = (code, state) => {
   if (!code.includes("return ")) code = "return " + code.trim();
   return new Function(`with(this) {
-  with(this.value) {
+  with(this.value || {}) {
     try {
       ${code}
-    } catch (e) {}
+    } catch (e) {
+      console.log(e)
+    }
     return false
   }
 }`).bind(state)();
@@ -109,7 +111,7 @@ const checkListeners = async (time) => {
     const {
       name,
       user = "channel",
-      initialValue = store[name] || {},
+      initialValue = store[name] || null,
       compare = "prevValue !== value",
       pipeline,
       open: url,
@@ -139,24 +141,52 @@ const checkListeners = async (time) => {
             if (debug) console.log("fetching from: " + url);
             acc.html = await fetch(url)
               .then((r) => r.text())
-              .then((t) => {
-                return new JSDOM(t).window.document;
-              });
+              .then((t) => new JSDOM(t).window.document);
           } else if (typeof step === "function") {
             acc.value = step(acc);
+            if (debug) console.log("value:", acc.value);
           } else {
             acc.value = execCode(step, acc);
+            if (debug) console.log("value:", acc.value);
           }
 
           return {
             ...acc,
           };
         },
-        { text: null, json: null, html: null, value: initialValue }
+        {
+          text: null,
+          json: null,
+          html: null,
+          value: initialValue,
+          date: (time, delimiter = "-") => {
+            const date = new Date(time);
+            const dd = (d) => (d < 10 ? "0" + d : d);
+            const year = date.getFullYear();
+            const month = dd(date.getMonth() + 1);
+            const day = dd(date.getDate());
+            return year + delimiter + month + delimiter + day;
+          },
+        }
       )
     ).value;
 
-    const prevValue = store[name] || initialValue;
+    let prevValue = store[name] || initialValue;
+    if (prevValue === null) {
+      switch (typeof value) {
+        case "number":
+          prevValue = 0;
+          break;
+        case "string":
+          prevValue = "";
+          break;
+        case "object":
+        default:
+          prevValue = {};
+          break;
+      }
+    }
+
     const shouldFire = execCode(compare, {
       prevValue,
       value,
@@ -212,7 +242,7 @@ const checkListeners = async (time) => {
     }
 
     if (debug) {
-      console.log("compare:", prevValue, "->", value);
+      console.log("compare:", prevValue, "->", value, "(" + name + ")");
       console.log("fire:", shouldFire);
     }
   });
