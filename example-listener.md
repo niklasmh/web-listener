@@ -2,6 +2,7 @@
 
 ```yaml
 interval: 60
+initialValue: 0
 compare: value !== prevValue
 open: <url or code returning an url>
 notify: <message or code returning a generated message>
