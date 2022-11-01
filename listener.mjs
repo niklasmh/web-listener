@@ -177,6 +177,9 @@ const checkListeners = async (time) => {
         case "number":
           prevValue = 0;
           break;
+        case "boolean":
+          prevValue = false;
+          break;
         case "string":
           prevValue = "";
           break;
