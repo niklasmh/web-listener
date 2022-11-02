@@ -46,8 +46,8 @@ try {
           .split("\n")
           .slice(1)
           .reduce((c, item) => {
-            let [key, value] = item.split(": ");
-            value = value.trim();
+            let [key, ...value] = item.split(":");
+            value = value.join(":").trim();
             if (/^[0-9]+$/.test(value)) {
               value = parseInt(value);
             }
@@ -89,7 +89,27 @@ try {
 
 const execCode = (code, state) => {
   if (!code.includes("return ")) code = "return " + code.trim();
-  return new Function(`with(this) {
+  return new Function(`
+const date = (time, delimiter = "-") => {
+  const date = new Date(time);
+  const dd = (d) => (d < 10 ? "0" + d : d);
+  const year = date.getFullYear();
+  const month = dd(date.getMonth() + 1);
+  const day = dd(date.getDate());
+  return year + delimiter + month + delimiter + day;
+}
+const dateTime = (time) => {
+  const date = new Date(time);
+  const dd = (d) => (d < 10 ? "0" + d : d);
+  const year = date.getFullYear();
+  const month = dd(date.getMonth() + 1);
+  const day = dd(date.getDate());
+  const hours = dd(date.getHours());
+  const minutes = dd(date.getMinutes());
+  const seconds = dd(date.getSeconds());
+  return year + "-" + month + "-" + day + " " + hours + ":" + minutes + ":" + seconds;
+}
+with(this) {
   with(this.value || {}) {
     try {
       ${code}
@@ -159,25 +179,6 @@ const checkListeners = async (time) => {
           json: null,
           html: null,
           value: initialValue,
-          date: (time, delimiter = "-") => {
-            const date = new Date(time);
-            const dd = (d) => (d < 10 ? "0" + d : d);
-            const year = date.getFullYear();
-            const month = dd(date.getMonth() + 1);
-            const day = dd(date.getDate());
-            return year + delimiter + month + delimiter + day;
-          },
-          dateTime: (time) => {
-            const date = new Date(time);
-            const dd = (d) => (d < 10 ? "0" + d : d);
-            const year = date.getFullYear();
-            const month = dd(date.getMonth() + 1);
-            const day = dd(date.getDate());
-            const hours = dd(date.getHours());
-            const minutes = dd(date.getMinutes());
-            const seconds = dd(date.getSeconds());
-            return year + "-" + month + "-" + day + " " + hours + ":" + minutes + ":" + seconds;
-          },
         }
       )
     ).value;
