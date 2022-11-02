@@ -167,6 +167,17 @@ const checkListeners = async (time) => {
             const day = dd(date.getDate());
             return year + delimiter + month + delimiter + day;
           },
+          dateTime: (time) => {
+            const date = new Date(time);
+            const dd = (d) => (d < 10 ? "0" + d : d);
+            const year = date.getFullYear();
+            const month = dd(date.getMonth() + 1);
+            const day = dd(date.getDate());
+            const hours = dd(date.getHours());
+            const minutes = dd(date.getMinutes());
+            const seconds = dd(date.getSeconds());
+            return year + "-" + month + "-" + day + " " + hours + ":" + minutes + ":" + seconds;
+          },
         }
       )
     ).value;
