@@ -31,12 +31,16 @@ try {
     .split("\n")
     .filter((url) => !url.startsWith("#"));
   const fetchListeners = listenerList.map(async (url) => {
+    const isHTTP = url.startsWith("http://") || url.startsWith("https://");
     const extension = url.split(".").slice(-1)[0].trim();
     if (extension === "json") {
-      return await fetch(url).then((r) => r.json());
+      if (isHTTP) {
+        return await fetch(url).then((r) => r.json());
+      }
+      return JSON.parse(fs.readFileSync("./" + url, "utf8"));
     }
     if (extension === "md") {
-      const markdown = await fetch(url).then((r) => r.text());
+      const markdown = isHTTP ? await fetch(url).then((r) => r.text()) : fs.readFileSync("./" + url, "utf8");
       const listenerSections = markdown.split(/^# /gm).slice(1);
       return listenerSections.map((section) => {
         const [name, ...codes] = section.trim().split("```");
