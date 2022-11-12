@@ -50,6 +50,8 @@ try {
             value = value.join(":").trim();
             if (/^[0-9]+$/.test(value)) {
               value = parseInt(value);
+            } else if (/^(true|false)$/.test(value)) {
+              value = value === "true";
             }
             return {
               ...c,
