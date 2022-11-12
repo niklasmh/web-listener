@@ -211,7 +211,7 @@ const checkListeners = async (time) => {
 
     if (shouldFire) {
       let urlLocation = "";
-      let title = name + " fikk et varsel";
+      let message = name + " got a notification";
 
       if (url) {
         if (typeof url === "function") {
@@ -235,25 +235,25 @@ const checkListeners = async (time) => {
 
       if (notifyMessage) {
         if (typeof notifyMessage === "function") {
-          title = notifyMessage(value);
+          message = notifyMessage(value);
         } else if (typeof notifyMessage === "string") {
-          title = execCode(notifyMessage.startsWith("return ") ? notifyMessage : '"' + notifyMessage + '"', {
+          message = execCode(notifyMessage.startsWith("return ") ? notifyMessage : '"' + notifyMessage + '"', {
             prevValue,
             value,
           });
         }
-        if (!isHeadless) notifier.notify({ title, sound: true });
+        if (!isHeadless) notifier.notify({ title: message, sound: true });
       }
 
       if (slackToken) {
         const userMarkup = user === "channel" ? "!channel" : "@" + slackUsers[user];
         slack.chat.postMessage({
-          text: `<${userMarkup}> ${title}${urlLocation ? ": " + urlLocation : ""}`,
+          text: `<${userMarkup}> ${message}${urlLocation ? ": " + urlLocation : ""}`,
           channel: "general",
         });
       }
 
-      console.log(title, urlLocation, new Date());
+      console.log(message, urlLocation, new Date());
     }
 
     if (debug) {
