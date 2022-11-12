@@ -33,14 +33,14 @@ See [`listener.example.md`](./listener.example.md) for inspiration.
 
 ### Local setup
 
-- Host a file like [`listener.example.md`](./listener.example.md) (can also be json) somewhere (e.g. gist or own server)
-- Add hosting url to a file called: `listeners.txt`
+- Create a file like [`listener.example.md`](./listener.example.md) in the root folder. Lets call it: `listener.some-product.md`
+- Add `listener.some-product.md` to a file called: `listeners.txt` (see [`listeners.example.txt`](./listeners.example.txt))
 - `npm start`
 
 ### GitHub Actions setup
 
 - Add these environment variables as Action secrets: `LISTENERS_URL`, `SLACK_TOKEN`, `USERS`.
-- `LISTENERS_URL` should point to a file on the internet that contains a list of URLs to the listeners.
+- `LISTENERS_URL` should point to a file on the internet that contains a list of URLs to the listeners. GitHub gists are perfect for this.
 - Remember to allow GitHub Actions on the repository.
 
 ### File reference for web-listeners
@@ -54,7 +54,7 @@ delay: 0 # in seconds
 initialValue: { price: 0, location: "" } # Initial prevValue
 compare: value.price !== prevValue.price # Some true/false expression
 open: "https://website.com/product/locations/" + value.location # What to open in browser if locally. Can be a script using "value" as a variable.
-notify: "Website had a change in price from $" + prevValue + " to $" + value # Message generated when sending Slack message.
+notify: "Website had a change in price from $" + prevValue.price + " to $" + value.price # Message generated when sending Slack message.
 user: niklasmh # List of Slack users (comma separated). If not specified, then @channel is used.
 debug: true # See why things are triggered (value, prevValue etc.)
 ```
