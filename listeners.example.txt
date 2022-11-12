@@ -1,0 +1,3 @@
+listener.product.md
+https://gist.githubusercontent.com/niklasmh/xxxx/raw/xxxx/some-other-product.md
+https://gist.githubusercontent.com/niklasmh/xxxx/raw/xxxx/some-third-product.json

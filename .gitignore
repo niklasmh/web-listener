@@ -2,5 +2,12 @@ node_modules
 package-lock.json
 store.json
 *.test.*
-listeners.txt
 *.local
+
+listener.*.json
+!listener.example.json
+
+listener.*.md
+!listener.example.md
+
+listeners.txt

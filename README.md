@@ -29,11 +29,11 @@ DEBUG=<true|false>
 
 ## Creating a listener
 
-See [`example-listener.md`](./example-listener.md) for inspiration.
+See [`listener.example.md`](./listener.example.md) for inspiration.
 
 ### Local setup
 
-- Host a file like [`example-listener.md`](./example-listener.md) (can also be json) somewhere (e.g. gist or own server)
+- Host a file like [`listener.example.md`](./listener.example.md) (can also be json) somewhere (e.g. gist or own server)
 - Add hosting url to a file called: `listeners.txt`
 - `npm start`
 
@@ -59,7 +59,7 @@ user: niklasmh # List of Slack users (comma separated). If not specified, then @
 debug: true # See why things are triggered (value, prevValue etc.)
 ```
 
-Fetch data, can be in form of `html`, `json` and `text`. If you say `html:url` you can traverse the data as a DOM-object.
+Fetch data, can be in form of `html`, `json` and `text`.
 
 ```fetch
 html:https://website.com/product
