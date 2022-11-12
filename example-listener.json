@@ -1,0 +1,15 @@
+{
+  "name": "Thing to listen to",
+  "interval": 60,
+  "delay": 0,
+  "initialValue": 0,
+  "compare": "value !== prevValue",
+  "open": "\"https://website.com/product\" + value",
+  "notify": "\"Website had a change in price from $\" + prevValue + \" to $\" + value",
+  "user": "niklas",
+  "debug": true,
+  "pipeline": [
+    "html:https://website.com/product",
+    "const price = html.querySelector(\"#price\").innerHTML.replace(/[^d]/g, \"\");\nreturn parseInt(price);"
+  ]
+}
