@@ -95,7 +95,9 @@ try {
 
 const execCode = (code, state) => {
   if (!code.includes("return ")) code = "return " + code.trim();
-  return new Function(`
+  try {
+    return {
+      value: new Function(`
 const date = (time, delimiter = "-") => {
   const date = new Date(time);
   const dd = (d) => (d < 10 ? "0" + d : d);
@@ -117,18 +119,25 @@ const dateTime = (time) => {
 }
 with(this) {
   with(this.value || {}) {
-    try {
-      ${code}
-    } catch (e) {
-      console.log(e)
-    }
-    return false
+    ${code}
   }
-}`).bind(state)();
+}`).bind(state)(),
+    };
+  } catch (error) {
+    return { error, value: "error" };
+  }
 };
 
 const parseUrl = (url, state) => {
-  if (url.startsWith('"') || url.includes("return ")) return execCode(url, state);
+  if (url.startsWith('"') || url.startsWith("'") || url.includes("return ")) {
+    const { value, error } = execCode(url, state);
+    if (error) {
+      return false;
+      console.log("url parsing failed:", error);
+    } else {
+      return value;
+    }
+  }
   return url;
 };
 
@@ -154,26 +163,68 @@ const checkListeners = async (time) => {
         async (accPromise, step) => {
           const acc = await accPromise;
 
-          if (/^text:/.test(step)) {
-            const url = parseUrl(step.slice(5), acc);
-            if (debug) console.log("fetching from: " + url);
-            acc.text = await fetch(url).then((r) => r.text());
-          } else if (/^json:/.test(step)) {
-            const url = parseUrl(step.slice(5), acc);
-            if (debug) console.log("fetching from: " + url);
-            acc.json = await fetch(url).then((r) => r.json());
-          } else if (/^html:/.test(step)) {
-            const url = parseUrl(step.slice(5), acc);
-            if (debug) console.log("fetching from: " + url);
-            acc.html = await fetch(url)
-              .then((r) => r.text())
-              .then((t) => new JSDOM(t).window.document);
-          } else if (typeof step === "function") {
-            acc.value = step(acc);
-            if (debug) console.log("value:", acc.value);
+          if (/^(text|json|html):/.test(step)) {
+            const type = step.slice(0, 4);
+            const lines = step.split("\n").reduce((acc, n) => {
+              let [key, ...value] = n.split(":");
+              key = key.trim();
+              value = value.join(":").trim();
+              return { ...acc, [key]: key in acc ? [...acc[key], value] : [value] };
+            }, {});
+
+            const getHeaders = (lines) => {
+              return lines.header
+                .map((header) => {
+                  const [name, ...value] = header.split(":");
+                  return [name, value.join(":").trim()];
+                })
+                .reduce((acc, [name, value]) => ({ ...acc, [name]: value }), {});
+            };
+
+            const getMethod = (lines) => {
+              return lines.method ? lines.method[0].toUpperCase() : "GET";
+            };
+
+            const getUrl = (lines, type) => {
+              return lines[type] ? lines[type][0] : "";
+            };
+
+            const url = parseUrl(getUrl(lines, type), acc);
+            const headers = getHeaders(lines);
+            const method = getMethod(lines);
+            const requestOptions = {
+              headers,
+              method,
+            };
+
+            if (!url) {
+              console.log("cannot parse url:", step);
+            } else {
+              if (debug) console.log("fetching from: " + url);
+
+              if (/^text:/.test(step)) {
+                acc.text = await fetch(url, requestOptions).then((r) => r.text());
+              } else if (/^json:/.test(step)) {
+                acc.json = await fetch(url, requestOptions).then((r) => r.json());
+              } else if (/^html:/.test(step)) {
+                acc.html = await fetch(url, requestOptions)
+                  .then((r) => r.text())
+                  .then((t) => new JSDOM(t).window.document);
+              }
+            }
           } else {
-            acc.value = execCode(step, acc);
-            if (debug) console.log("value:", acc.value);
+            if (typeof step === "function") {
+              acc.value = step(acc);
+              if (debug) console.log("value:", acc.value);
+            } else {
+              const { value, error } = execCode(step, acc);
+              if (error) {
+                console.log(name, "failed executing code block:", error);
+              } else {
+                acc.value = value;
+                if (debug) console.log("value:", value);
+              }
+            }
           }
 
           return {
@@ -211,7 +262,7 @@ const checkListeners = async (time) => {
     const shouldFire = execCode(compare, {
       prevValue,
       value,
-    });
+    }).value;
 
     store[name] = value;
 
@@ -223,7 +274,7 @@ const checkListeners = async (time) => {
         if (typeof url === "function") {
           urlLocation = url(value);
         } else if (typeof url === "string") {
-          urlLocation = execCode(
+          const { value: urlLocationValue, error } = execCode(
             '"' +
               parseUrl(url, {
                 prevValue,
@@ -235,6 +286,12 @@ const checkListeners = async (time) => {
               value,
             }
           );
+          if (error) {
+            urlLocation = "";
+            console.log("open url failed:", error);
+          } else {
+            urlLocation = urlLocationValue;
+          }
         }
         if (urlLocation && !isHeadless) open(urlLocation);
       }
@@ -243,10 +300,21 @@ const checkListeners = async (time) => {
         if (typeof notifyMessage === "function") {
           message = notifyMessage(value);
         } else if (typeof notifyMessage === "string") {
-          message = execCode(notifyMessage.startsWith("return ") ? notifyMessage : '"' + notifyMessage + '"', {
-            prevValue,
-            value,
-          });
+          const { value: notifyValue, error } = execCode(
+            notifyMessage.startsWith("return ") || notifyMessage.startsWith('"') || notifyMessage.startsWith("'")
+              ? notifyMessage
+              : '"' + notifyMessage + '"',
+            {
+              prevValue,
+              value,
+            }
+          );
+          if (error) {
+            message = "error:" + error;
+            console.log("notify failed:", error);
+          } else {
+            message = notifyValue;
+          }
         }
         if (!isHeadless) notifier.notify({ title: message, sound: true });
       }
@@ -254,7 +322,7 @@ const checkListeners = async (time) => {
       if (slackToken) {
         const userMarkup = user === "channel" ? "!channel" : "@" + slackUsers[user];
         slack.chat.postMessage({
-          text: `<${userMarkup}> ${message}${urlLocation ? ": " + urlLocation : ""}`,
+          text: urlLocation ? `<${userMarkup}> ${message}: ${urlLocation}` : `<${userMarkup}> ${message}`,
           channel: "general",
         });
       }

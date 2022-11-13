@@ -15,6 +15,9 @@ First we need to get some data:
 
 ```fetch
 html:https://website.com/product
+method:GET
+header:accept:text/html
+header:user-agent:Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36
 ```
 
 Now we need to extract the data which now exists in the `html` variable as a DOM-object:

@@ -77,6 +77,9 @@ We now know the price. What if we want to know where to find it? (if that is the
 
 ```fetch
 json:https://website.com/product/locations
+method:GET
+header:accept:text/html
+header:user-agent:Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36
 ```
 
 Now the `json` variable is set to a parsed JSON object. Lets find the location:
