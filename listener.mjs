@@ -192,7 +192,6 @@ const injectCodeInCURL = (curl, state) => {
 
 const parseCURL = (curl, state) => {
   const generatedCURL = injectCodeInCURL(curl, state);
-  //console.log(generatedCURL);
   const { url, header, method } = CURLParser(generatedCURL);
   return {
     url,
