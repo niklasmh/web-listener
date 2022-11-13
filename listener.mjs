@@ -1,6 +1,7 @@
 import fs from "fs";
 import fetch from "node-fetch";
 import notifier from "node-notifier";
+import CURLParser from "parse-curl";
 import open from "open";
 import { JSDOM } from "jsdom";
 import { WebClient } from "@slack/web-api";
@@ -63,8 +64,18 @@ try {
             };
           }, {});
         const pipeline = codes
-          .filter((code) => code.startsWith("javascript") || code.startsWith("fetch"))
-          .map((code) => code.split("\n").slice(1).join("\n").trim());
+          .filter((code) => code.startsWith("javascript") || code.startsWith("fetch") || code.startsWith("curl"))
+          .map((code) => {
+            let [codeInfo, ...codeBlock] = code.trim().split("\n");
+            codeBlock = codeBlock.join("\n");
+            let [codeType, ...metadata] = codeInfo.split(" ");
+            metadata = metadata.join(" ");
+            return {
+              codeType,
+              metadata,
+              code: codeBlock,
+            };
+          });
         return {
           name: name.trim(),
           ...config,
@@ -141,6 +152,55 @@ const parseUrl = (url, state) => {
   return url;
 };
 
+const getHeaders = (lines) => {
+  return lines.header
+    .map((header) => {
+      const [name, ...value] = header.split(":");
+      return [name, value.join(":").trim()];
+    })
+    .reduce((acc, [name, value]) => ({ ...acc, [name]: value }), {});
+};
+
+const getMethod = (lines) => {
+  return lines.method ? lines.method[0].toUpperCase() : "GET";
+};
+
+const getUrl = (lines, fetchType) => {
+  return lines[fetchType] ? lines[fetchType][0] : "";
+};
+
+const parseFetch = (lines, fetchType, state) => ({
+  url: parseUrl(getUrl(lines, fetchType), state),
+  headers: getHeaders(lines),
+  method: getMethod(lines),
+});
+
+const injectCodeInCURL = (curl, state) => {
+  return curl.split(/({{|}})/).reduce((string, content, i) => {
+    switch (i % 4) {
+      case 0:
+        return string + content;
+      case 1:
+        return string;
+      case 2:
+        return string + execCode(content, state).value;
+      case 3:
+        return string;
+    }
+  }, "");
+};
+
+const parseCURL = (curl, state) => {
+  const generatedCURL = injectCodeInCURL(curl, state);
+  //console.log(generatedCURL);
+  const { url, header, method } = CURLParser(generatedCURL);
+  return {
+    url,
+    headers: header,
+    method,
+  };
+};
+
 const checkListeners = async (time) => {
   const processes = listeners.map(async (listener) => {
     const {
@@ -158,87 +218,105 @@ const checkListeners = async (time) => {
 
     if ((time - delay) % interval !== 0) return;
 
+    let stopProcess = false;
+
     const value = (
       await pipeline.reduce(
-        async (accPromise, step) => {
-          const acc = await accPromise;
+        async (statePromise, { code, codeType, metadata = "text" }) => {
+          const state = await statePromise;
 
-          if (/^(text|json|html):/.test(step)) {
-            const type = step.slice(0, 4);
-            const lines = step.split("\n").reduce((acc, n) => {
+          if (stopProcess) {
+            console.log("stopping pipeline for", name);
+            return statePromise;
+          }
+
+          if (/^(fetch|curl)$/.test(codeType)) {
+            const lines = code.split("\n").reduce((acc, n) => {
               let [key, ...value] = n.split(":");
               key = key.trim();
               value = value.join(":").trim();
               return { ...acc, [key]: key in acc ? [...acc[key], value] : [value] };
             }, {});
+            const fetchType = metadata.slice(0, 4);
 
-            const getHeaders = (lines) => {
-              return lines.header
-                .map((header) => {
-                  const [name, ...value] = header.split(":");
-                  return [name, value.join(":").trim()];
-                })
-                .reduce((acc, [name, value]) => ({ ...acc, [name]: value }), {});
-            };
+            const { url, method, headers } =
+              codeType === "curl" ? parseCURL(code, state) : parseFetch(lines, fetchType, state);
 
-            const getMethod = (lines) => {
-              return lines.method ? lines.method[0].toUpperCase() : "GET";
-            };
-
-            const getUrl = (lines, type) => {
-              return lines[type] ? lines[type][0] : "";
-            };
-
-            const url = parseUrl(getUrl(lines, type), acc);
-            const headers = getHeaders(lines);
-            const method = getMethod(lines);
             const requestOptions = {
               headers,
               method,
             };
 
             if (!url) {
-              console.log("cannot parse url:", step);
+              console.log("cannot parse url:", code);
             } else {
               if (debug) console.log("fetching from: " + url);
-
-              if (/^text:/.test(step)) {
-                acc.text = await fetch(url, requestOptions).then((r) => r.text());
-              } else if (/^json:/.test(step)) {
-                acc.json = await fetch(url, requestOptions).then((r) => r.json());
-              } else if (/^html:/.test(step)) {
-                acc.html = await fetch(url, requestOptions)
-                  .then((r) => r.text())
-                  .then((t) => new JSDOM(t).window.document);
+              try {
+                const handleStatusCode = async (r) => {
+                  if (r.status >= 200 && r.status < 400) {
+                    return r;
+                  }
+                  throw new Error(await r.text());
+                };
+                switch (fetchType) {
+                  case "text":
+                    state.text = await fetch(url, requestOptions)
+                      .then(handleStatusCode)
+                      .then((r) => r.text());
+                    break;
+                  case "json":
+                    state.json = await fetch(url, requestOptions)
+                      .then(handleStatusCode)
+                      .then((r) => r.json());
+                    break;
+                  case "html":
+                    state.html = await fetch(url, requestOptions)
+                      .then(handleStatusCode)
+                      .then((r) => r.text())
+                      .then((t) => new JSDOM(t).window.document);
+                    break;
+                }
+              } catch (error) {
+                state.error = error.message;
+                console.log("failed to fetch:", error.message);
               }
             }
           } else {
-            if (typeof step === "function") {
-              acc.value = step(acc);
-              if (debug) console.log("value:", acc.value);
+            if (typeof code === "function") {
+              state.value = code(state);
+              if (debug) console.log("value:", state.value);
             } else {
-              const { value, error } = execCode(step, acc);
+              const { value, error } = execCode(code, state);
               if (error) {
                 console.log(name, "failed executing code block:", error);
               } else {
-                acc.value = value;
+                state.value = value;
                 if (debug) console.log("value:", value);
               }
             }
           }
 
           return {
-            ...acc,
+            ...state,
           };
         },
         {
           text: null,
           json: null,
           html: null,
+          error: null,
+          exit: () => {
+            stopProcess = true;
+            return "exit";
+          },
           value: initialValue,
         }
       )
     ).value;
+
+    if (stopProcess) {
+      return;
+    }
 
     let prevValue = store[name] || initialValue;
     if (prevValue === null) {

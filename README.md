@@ -61,13 +61,17 @@ debug: true # See why things are triggered (value, prevValue etc.)
 
 Fetch data, can be in form of `html`, `json` and `text`.
 
-```fetch
-html:https://website.com/product
+```fetch html
+url:"https://website.com/product/" + new Date().getFullYear()
+method:GET
+header:accept:text/html
+header:user-agent:Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36
 ```
 
 Now `html` is set to a DOM object. Lets search through it and extract the value!
 
 ```javascript
+if (!html) return exit(); // Exit the pipeline
 const priceElement = html.querySelector("#price");
 const price = priceElement.innerHTML.replace(/[^\d]/g, "");
 return { price: parseInt(price) };
@@ -75,11 +79,11 @@ return { price: parseInt(price) };
 
 We now know the price. What if we want to know where to find it? (if that is the case)
 
-```fetch
-json:https://website.com/product/locations
-method:GET
-header:accept:text/html
-header:user-agent:Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36
+```curl json
+curl 'https://website.com/product/locations/?price={{value}}'
+  -X GET
+  -H 'Accept: text/html'
+  -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36'
 ```
 
 Now the `json` variable is set to a parsed JSON object. Lets find the location:

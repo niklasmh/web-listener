@@ -9,7 +9,8 @@
     "jsdom": "^19.0.0",
     "node-fetch": "^3.1.0",
     "node-notifier": "^10.0.1",
-    "open": "^8.4.0"
+    "open": "^8.4.0",
+    "parse-curl": "^0.2.6"
   },
   "scripts": {
     "start": "node listener.mjs",

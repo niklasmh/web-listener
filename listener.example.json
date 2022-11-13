@@ -9,7 +9,7 @@
   "user": "niklas",
   "debug": true,
   "pipeline": [
-    "html:https://website.com/product",
-    "const price = html.querySelector(\"#price\").innerHTML.replace(/[^d]/g, \"\");\nreturn parseInt(price);"
+    "fetch html\nurl:https://website.com/product",
+    "javascript\nconst price = html.querySelector(\"#price\").innerHTML.replace(/[^d]/g, \"\");\nreturn parseInt(price);"
   ]
 }
