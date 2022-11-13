@@ -45,7 +45,7 @@ See [`listener.example.md`](./listener.example.md) for inspiration.
 
 ### File reference for web-listeners
 
-````md
+````markdown
 # Name of thing to listen to
 
 ```yaml
