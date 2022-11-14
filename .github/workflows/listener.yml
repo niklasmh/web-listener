@@ -23,8 +23,6 @@ jobs:
 
       - name: Restore State 🔎
         uses: actions/download-artifact@v3
-        with:
-          name: store
 
       - name: Cache Node Modules
         id: node-cache
@@ -47,5 +45,4 @@ jobs:
       - name: Store State 🧠
         uses: actions/upload-artifact@v3
         with:
-          name: store
           path: store.json
