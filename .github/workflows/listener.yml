@@ -21,7 +21,7 @@ jobs:
       - name: Checkout 🛎️
         uses: actions/checkout@v2.3.1
 
-      - name: Restore state 🔎
+      - name: Restore State 🔎
         uses: actions/download-artifact@v3
         with:
           name: store
@@ -44,7 +44,7 @@ jobs:
           USERS: ${{ secrets.USERS }}
         run: npm start
 
-      - name: Store state 🧠
+      - name: Store State 🧠
         uses: actions/upload-artifact@v3
         with:
           name: store
