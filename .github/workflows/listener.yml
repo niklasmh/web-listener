@@ -26,7 +26,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: store.json
-          key: ${{ runner.os }}-store
+          key: ${{ runner.os }}-store-${{ hashFiles('store.json') }}
 
       - name: Cache Node Modules
         id: node-cache
