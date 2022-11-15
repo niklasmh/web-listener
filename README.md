@@ -91,7 +91,7 @@ Now the `json` variable is set to a parsed JSON object. Lets find the location:
 { price: value.price, location: json.locations[0] }
 ```
 
-Now, the engine will check with the `prevValue` variable and check if the `compare` condition is true.
+Now, the engine will check if the `compare` condition is true using the old `prevValue` and the current `value`.
 ````
 
 ## GitHub Actions vs locally
