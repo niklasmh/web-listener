@@ -11,7 +11,8 @@ dotenvFlow.config();
 
 const slackToken = process.env.SLACK_TOKEN;
 const slack = new WebClient(slackToken);
-const slackUsers = process.env.USERS.split(",")
+const slackUsers = (process.env.USERS || "")
+  .split(",")
   .concat(["channel:channel"])
   .reduce((acc, user) => {
     const [name, id] = user.split(":");
@@ -153,7 +154,7 @@ const parseUrl = (url, state) => {
 };
 
 const getHeaders = (lines) => {
-  return lines.header
+  return (lines.header || [])
     .map((header) => {
       const [name, ...value] = header.split(":");
       return [name, value.join(":").trim()];
